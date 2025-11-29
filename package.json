@@ -1,6 +1,6 @@
 {
 	"name": "n8n-nodes-fixed-sender-email",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "n8n node for sending emails with a fixed sender address from SMTP credentials",
 	"license": "MIT",
 	"homepage": "https://github.com/uppinote20/n8n-nodes-fixed-sender-email",
