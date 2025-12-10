@@ -7,11 +7,10 @@ export const messageProperty: INodeProperties = {
 	name: 'message',
 	type: 'string',
 	typeOptions: {
-		rows: 5,
+		rows: 4,
 	},
 	default: '',
 	required: true,
-	description: 'The message to include in the email body (HTML supported)',
 	displayOptions: {
 		show: {
 			operation: [SEND_AND_WAIT_OPERATION],
@@ -29,7 +28,7 @@ export const responseTypeProperty: INodeProperties = {
 		{
 			name: 'Approval',
 			value: 'approval',
-			description: 'User can approve or disapprove from within the message',
+			description: 'User can approve/disapprove from within the message',
 		},
 		{
 			name: 'Free Text',
@@ -39,7 +38,7 @@ export const responseTypeProperty: INodeProperties = {
 		{
 			name: 'Custom Form',
 			value: 'customForm',
-			description: 'User can submit a response with a custom form',
+			description: 'User can submit a response via a custom form',
 		},
 	],
 	displayOptions: {
@@ -49,147 +48,192 @@ export const responseTypeProperty: INodeProperties = {
 	},
 };
 
-// Approval Options
-export const approvalProperties: INodeProperties[] = [
+// Limit Wait Time Properties (used inside fixedCollection)
+const limitWaitTimeProperties: INodeProperties[] = [
 	{
-		displayName: 'Approval Type',
-		name: 'approvalType',
+		displayName: 'Limit Type',
+		name: 'limitType',
 		type: 'options',
-		default: 'single',
+		default: 'afterTimeInterval',
 		options: [
 			{
-				name: 'Approve Only',
-				value: 'single',
-				description: 'Single approval button',
+				name: 'After Time Interval',
+				value: 'afterTimeInterval',
+				description: 'Resume after a specified time interval',
 			},
 			{
-				name: 'Approve and Disapprove',
-				value: 'double',
-				description: 'Approve and Disapprove buttons',
+				name: 'At Specified Time',
+				value: 'atSpecifiedTime',
+				description: 'Resume at a specific date and time',
 			},
 		],
+	},
+	{
+		displayName: 'Amount',
+		name: 'resumeAmount',
+		type: 'number',
+		default: 1,
+		typeOptions: {
+			minValue: 0,
+			numberPrecision: 2,
+		},
 		displayOptions: {
 			show: {
-				operation: [SEND_AND_WAIT_OPERATION],
-				responseType: ['approval'],
+				limitType: ['afterTimeInterval'],
 			},
 		},
 	},
 	{
-		displayName: 'Approve Button Label',
-		name: 'approveLabel',
-		type: 'string',
-		default: 'Approve',
-		displayOptions: {
-			show: {
-				operation: [SEND_AND_WAIT_OPERATION],
-				responseType: ['approval'],
-			},
-		},
-	},
-	{
-		displayName: 'Approve Button Style',
-		name: 'approveStyle',
+		displayName: 'Unit',
+		name: 'resumeUnit',
 		type: 'options',
-		default: 'primary',
+		default: 'hours',
 		options: [
-			{ name: 'Primary', value: 'primary' },
-			{ name: 'Secondary', value: 'secondary' },
+			{ name: 'Minutes', value: 'minutes' },
+			{ name: 'Hours', value: 'hours' },
+			{ name: 'Days', value: 'days' },
 		],
 		displayOptions: {
 			show: {
-				operation: [SEND_AND_WAIT_OPERATION],
-				responseType: ['approval'],
+				limitType: ['afterTimeInterval'],
 			},
 		},
 	},
 	{
-		displayName: 'Disapprove Button Label',
-		name: 'disapproveLabel',
-		type: 'string',
-		default: 'Decline',
+		displayName: 'Max Date and Time',
+		name: 'maxDateTime',
+		type: 'dateTime',
+		default: '',
 		displayOptions: {
 			show: {
-				operation: [SEND_AND_WAIT_OPERATION],
-				responseType: ['approval'],
-				approvalType: ['double'],
-			},
-		},
-	},
-	{
-		displayName: 'Disapprove Button Style',
-		name: 'disapproveStyle',
-		type: 'options',
-		default: 'secondary',
-		options: [
-			{ name: 'Primary', value: 'primary' },
-			{ name: 'Secondary', value: 'secondary' },
-		],
-		displayOptions: {
-			show: {
-				operation: [SEND_AND_WAIT_OPERATION],
-				responseType: ['approval'],
-				approvalType: ['double'],
+				limitType: ['atSpecifiedTime'],
 			},
 		},
 	},
 ];
 
-// Form Options (shared by freeText and customForm)
-export const formProperties: INodeProperties[] = [
-	{
-		displayName: 'Message Button Label',
-		name: 'messageButtonLabel',
-		type: 'string',
-		default: 'Respond',
-		description: 'The text on the button in the email that opens the response form',
-		displayOptions: {
-			show: {
-				operation: [SEND_AND_WAIT_OPERATION],
-				responseType: ['freeText', 'customForm'],
-			},
+// Limit Wait Time Option (fixedCollection)
+const limitWaitTimeOption: INodeProperties = {
+	displayName: 'Limit Wait Time',
+	name: 'limitWaitTime',
+	type: 'fixedCollection',
+	description: 'Whether the workflow will automatically resume execution after the specified limit type',
+	default: {},
+	options: [
+		{
+			displayName: 'Values',
+			name: 'values',
+			values: limitWaitTimeProperties,
+		},
+	],
+};
+
+// Approval Options (fixedCollection) - matching n8n official structure
+export const approvalOptionsProperty: INodeProperties = {
+	displayName: 'Approval Options',
+	name: 'approvalOptions',
+	type: 'fixedCollection',
+	placeholder: 'Add option',
+	default: {},
+	options: [
+		{
+			displayName: 'Values',
+			name: 'values',
+			values: [
+				{
+					displayName: 'Type of Approval',
+					name: 'approvalType',
+					type: 'options',
+					default: 'single',
+					options: [
+						{
+							name: 'Approve Only',
+							value: 'single',
+						},
+						{
+							name: 'Approve and Disapprove',
+							value: 'double',
+						},
+					],
+				},
+				{
+					displayName: 'Approve Button Label',
+					name: 'approveLabel',
+					type: 'string',
+					default: 'Approve',
+					displayOptions: {
+						show: {
+							approvalType: ['single', 'double'],
+						},
+					},
+				},
+				{
+					displayName: 'Approve Button Style',
+					name: 'buttonApprovalStyle',
+					type: 'options',
+					default: 'primary',
+					options: [
+						{ name: 'Primary', value: 'primary' },
+						{ name: 'Secondary', value: 'secondary' },
+					],
+					displayOptions: {
+						show: {
+							approvalType: ['single', 'double'],
+						},
+					},
+				},
+				{
+					displayName: 'Disapprove Button Label',
+					name: 'disapproveLabel',
+					type: 'string',
+					default: 'Decline',
+					displayOptions: {
+						show: {
+							approvalType: ['double'],
+						},
+					},
+				},
+				{
+					displayName: 'Disapprove Button Style',
+					name: 'buttonDisapprovalStyle',
+					type: 'options',
+					default: 'secondary',
+					options: [
+						{ name: 'Primary', value: 'primary' },
+						{ name: 'Secondary', value: 'secondary' },
+					],
+					displayOptions: {
+						show: {
+							approvalType: ['double'],
+						},
+					},
+				},
+			],
+		},
+	],
+	displayOptions: {
+		show: {
+			operation: [SEND_AND_WAIT_OPERATION],
+			responseType: ['approval'],
 		},
 	},
-	{
-		displayName: 'Response Form Title',
-		name: 'responseFormTitle',
-		type: 'string',
-		default: 'Submit your response',
-		displayOptions: {
-			show: {
-				operation: [SEND_AND_WAIT_OPERATION],
-				responseType: ['freeText', 'customForm'],
-			},
+};
+
+// Options for Approval response type
+export const approvalOptionsCollectionProperty: INodeProperties = {
+	displayName: 'Options',
+	name: 'options',
+	type: 'collection',
+	placeholder: 'Add option',
+	default: {},
+	options: [limitWaitTimeOption],
+	displayOptions: {
+		show: {
+			operation: [SEND_AND_WAIT_OPERATION],
+			responseType: ['approval'],
 		},
 	},
-	{
-		displayName: 'Response Form Description',
-		name: 'responseFormDescription',
-		type: 'string',
-		default: '',
-		typeOptions: {
-			rows: 3,
-		},
-		displayOptions: {
-			show: {
-				operation: [SEND_AND_WAIT_OPERATION],
-				responseType: ['freeText', 'customForm'],
-			},
-		},
-	},
-	{
-		displayName: 'Response Form Button Label',
-		name: 'responseFormButtonLabel',
-		type: 'string',
-		default: 'Submit',
-		displayOptions: {
-			show: {
-				operation: [SEND_AND_WAIT_OPERATION],
-				responseType: ['freeText', 'customForm'],
-			},
-		},
-	},
-];
+};
 
 // Custom Form Elements
 export const customFormProperty: INodeProperties = {
@@ -270,100 +314,56 @@ export const customFormProperty: INodeProperties = {
 	],
 };
 
-// Wait Time Options
-export const waitTimeProperties: INodeProperties[] = [
-	{
-		displayName: 'Wait Time Limit',
-		name: 'limitWaitTime',
-		type: 'boolean',
-		default: false,
-		description: 'Whether to set a time limit for waiting',
-		displayOptions: {
-			show: {
-				operation: [SEND_AND_WAIT_OPERATION],
-			},
+// Options for freeText and customForm response types
+export const formOptionsCollectionProperty: INodeProperties = {
+	displayName: 'Options',
+	name: 'options',
+	type: 'collection',
+	placeholder: 'Add option',
+	default: {},
+	options: [
+		{
+			displayName: 'Message Button Label',
+			name: 'messageButtonLabel',
+			type: 'string',
+			default: 'Respond',
+		},
+		{
+			displayName: 'Response Form Title',
+			name: 'responseFormTitle',
+			description: 'Title of the form that the user can access to provide their response',
+			type: 'string',
+			default: '',
+		},
+		{
+			displayName: 'Response Form Description',
+			name: 'responseFormDescription',
+			description: 'Description of the form that the user can access to provide their response',
+			type: 'string',
+			default: '',
+		},
+		{
+			displayName: 'Response Form Button Label',
+			name: 'responseFormButtonLabel',
+			type: 'string',
+			default: 'Submit',
+		},
+		limitWaitTimeOption,
+	],
+	displayOptions: {
+		show: {
+			operation: [SEND_AND_WAIT_OPERATION],
+			responseType: ['freeText', 'customForm'],
 		},
 	},
-	{
-		displayName: 'Limit Type',
-		name: 'limitType',
-		type: 'options',
-		default: 'afterTimeInterval',
-		options: [
-			{
-				name: 'After Time Interval',
-				value: 'afterTimeInterval',
-				description: 'Resume after a specified time interval',
-			},
-			{
-				name: 'At Specified Time',
-				value: 'atSpecifiedTime',
-				description: 'Resume at a specific date and time',
-			},
-		],
-		displayOptions: {
-			show: {
-				operation: [SEND_AND_WAIT_OPERATION],
-				limitWaitTime: [true],
-			},
-		},
-	},
-	{
-		displayName: 'Wait Amount',
-		name: 'resumeAmount',
-		type: 'number',
-		default: 1,
-		typeOptions: {
-			minValue: 0,
-			numberPrecision: 2,
-		},
-		displayOptions: {
-			show: {
-				operation: [SEND_AND_WAIT_OPERATION],
-				limitWaitTime: [true],
-				limitType: ['afterTimeInterval'],
-			},
-		},
-	},
-	{
-		displayName: 'Wait Unit',
-		name: 'resumeUnit',
-		type: 'options',
-		default: 'hours',
-		options: [
-			{ name: 'Minutes', value: 'minutes' },
-			{ name: 'Hours', value: 'hours' },
-			{ name: 'Days', value: 'days' },
-		],
-		displayOptions: {
-			show: {
-				operation: [SEND_AND_WAIT_OPERATION],
-				limitWaitTime: [true],
-				limitType: ['afterTimeInterval'],
-			},
-		},
-	},
-	{
-		displayName: 'Max Date and Time',
-		name: 'maxDateTime',
-		type: 'dateTime',
-		default: '',
-		displayOptions: {
-			show: {
-				operation: [SEND_AND_WAIT_OPERATION],
-				limitWaitTime: [true],
-				limitType: ['atSpecifiedTime'],
-			},
-		},
-	},
-];
+};
 
 // Export all sendAndWait properties combined
 export const sendAndWaitProperties: INodeProperties[] = [
 	messageProperty,
 	responseTypeProperty,
-	...approvalProperties,
-	...formProperties,
 	customFormProperty,
-	...waitTimeProperties,
+	approvalOptionsProperty,
+	approvalOptionsCollectionProperty,
+	formOptionsCollectionProperty,
 ];

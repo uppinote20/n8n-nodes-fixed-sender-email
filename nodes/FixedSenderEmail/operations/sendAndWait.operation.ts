@@ -33,25 +33,33 @@ export async function executeSendAndWait(
 		let buttonHtml = '';
 
 		if (responseType === 'approval') {
-			// Build approval buttons
-			const approvalType = this.getNodeParameter('approvalType', itemIndex) as string;
+			// Get approval options from fixedCollection
+			const approvalOptions = this.getNodeParameter('approvalOptions.values', itemIndex, {}) as {
+				approvalType?: string;
+				approveLabel?: string;
+				buttonApprovalStyle?: string;
+				disapproveLabel?: string;
+				buttonDisapprovalStyle?: string;
+			};
+
+			const approvalType = approvalOptions.approvalType || 'single';
 			const buttons: ButtonConfig[] = [];
 
-			const approveLabel = this.getNodeParameter('approveLabel', itemIndex) as string;
-			const approveStyle = this.getNodeParameter('approveStyle', itemIndex) as 'primary' | 'secondary';
+			const approveLabel = approvalOptions.approveLabel || 'Approve';
+			const approveStyle = (approvalOptions.buttonApprovalStyle || 'primary') as 'primary' | 'secondary';
 			buttons.push({ label: approveLabel, value: 'true', style: approveStyle });
 
 			if (approvalType === 'double') {
-				const disapproveLabel = this.getNodeParameter('disapproveLabel', itemIndex) as string;
-				const disapproveStyle = this.getNodeParameter('disapproveStyle', itemIndex) as 'primary' | 'secondary';
+				const disapproveLabel = approvalOptions.disapproveLabel || 'Decline';
+				const disapproveStyle = (approvalOptions.buttonDisapprovalStyle || 'secondary') as 'primary' | 'secondary';
 				buttons.push({ label: disapproveLabel, value: 'false', style: disapproveStyle });
 			}
 
 			// Generate button HTML
 			buttonHtml = buildApprovalButtonsHtml(buttons, webhookUrl);
 		} else if (responseType === 'freeText' || responseType === 'customForm') {
-			// Build form link button
-			const messageButtonLabel = this.getNodeParameter('messageButtonLabel', itemIndex) as string;
+			// Build form link button - get from options collection
+			const messageButtonLabel = (options.messageButtonLabel as string) || 'Respond';
 			buttonHtml = buildFormButtonHtml(messageButtonLabel, webhookUrl, responseType);
 		}
 
@@ -69,7 +77,7 @@ export async function executeSendAndWait(
 		await transporter.sendMail(mailOptions);
 
 		// Calculate wait time
-		const waitTill = calculateWaitTime.call(this, itemIndex);
+		const waitTill = calculateWaitTime.call(this, itemIndex, options);
 
 		// Put execution to wait
 		await this.putExecutionToWait(waitTill);
@@ -99,18 +107,21 @@ export async function executeSendAndWait(
 function calculateWaitTime(
 	this: IExecuteFunctions,
 	itemIndex: number,
+	options: IDataObject,
 ): Date | typeof WAIT_INDEFINITELY {
-	const limitWaitTime = this.getNodeParameter('limitWaitTime', itemIndex, false) as boolean;
+	// Get limitWaitTime from options.limitWaitTime.values (fixedCollection structure)
+	const limitWaitTimeData = options.limitWaitTime as IDataObject | undefined;
+	const limitWaitTimeValues = limitWaitTimeData?.values as IDataObject | undefined;
 
-	if (!limitWaitTime) {
+	if (!limitWaitTimeValues) {
 		return WAIT_INDEFINITELY;
 	}
 
-	const limitType = this.getNodeParameter('limitType', itemIndex) as string;
+	const limitType = limitWaitTimeValues.limitType as string;
 
 	if (limitType === 'afterTimeInterval') {
-		const resumeAmount = this.getNodeParameter('resumeAmount', itemIndex) as number;
-		const resumeUnit = this.getNodeParameter('resumeUnit', itemIndex) as string;
+		const resumeAmount = (limitWaitTimeValues.resumeAmount as number) || 1;
+		const resumeUnit = (limitWaitTimeValues.resumeUnit as string) || 'hours';
 
 		let milliseconds = 0;
 		switch (resumeUnit) {
@@ -127,8 +138,10 @@ function calculateWaitTime(
 
 		return new Date(Date.now() + milliseconds);
 	} else if (limitType === 'atSpecifiedTime') {
-		const maxDateTime = this.getNodeParameter('maxDateTime', itemIndex) as string;
-		return new Date(maxDateTime);
+		const maxDateTime = limitWaitTimeValues.maxDateTime as string;
+		if (maxDateTime) {
+			return new Date(maxDateTime);
+		}
 	}
 
 	return WAIT_INDEFINITELY;

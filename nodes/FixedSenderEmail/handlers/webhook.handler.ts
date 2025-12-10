@@ -19,6 +19,8 @@ export async function handleWebhook(
 
 		// If it's an approval button click
 		if (approvalValue !== undefined) {
+			const approved = approvalValue === 'true';
+
 			res.setHeader('Content-Type', 'text/html; charset=utf-8');
 			res.end(ACTION_RECORDED_PAGE);
 
@@ -28,8 +30,7 @@ export async function handleWebhook(
 					[
 						{
 							json: {
-								response: approvalValue,
-								responseType: 'approval',
+								data: { approved },
 							},
 						},
 					],
@@ -63,14 +64,30 @@ export async function handleWebhook(
 	res.setHeader('Content-Type', 'text/html; charset=utf-8');
 	res.end(ACTION_RECORDED_PAGE);
 
+	// Check if this is a freeText response (has 'response' field)
+	if (body.response !== undefined) {
+		return {
+			webhookResponse: ACTION_RECORDED_PAGE,
+			workflowData: [
+				[
+					{
+						json: {
+							data: { text: body.response },
+						},
+					},
+				],
+			],
+		};
+	}
+
+	// Custom form response
 	return {
 		webhookResponse: ACTION_RECORDED_PAGE,
 		workflowData: [
 			[
 				{
 					json: {
-						...body,
-						responseType: 'form',
+						data: body,
 					},
 				},
 			],
@@ -79,31 +96,27 @@ export async function handleWebhook(
 }
 
 function buildFreeTextFormPage(this: IWebhookFunctions, webhookUrl: string): string {
-	let formTitle = 'Submit your response';
-	let formDescription = '';
-	let formButtonLabel = 'Submit';
+	const message = getMessageParam.call(this);
+	const options = getOptionsParam.call(this);
 
-	try {
-		formTitle = (this.getNodeParameter('responseFormTitle', 0) as string) || formTitle;
-		formDescription = (this.getNodeParameter('responseFormDescription', 0) as string) || '';
-		formButtonLabel = (this.getNodeParameter('responseFormButtonLabel', 0) as string) || formButtonLabel;
-	} catch {
-		// Use defaults if parameters not available
-	}
+	const formTitle = (options.responseFormTitle as string) || '';
+	const formDescription = (options.responseFormDescription as string) || message;
+	const formButtonLabel = (options.responseFormButtonLabel as string) || 'Submit';
 
 	return createFreeTextFormPage(formTitle, formDescription, formButtonLabel, webhookUrl);
 }
 
 function buildCustomFormPage(this: IWebhookFunctions, webhookUrl: string): string {
-	let formTitle = 'Submit your response';
-	let formDescription = '';
-	let formButtonLabel = 'Submit';
+	const message = getMessageParam.call(this);
+	const options = getOptionsParam.call(this);
+
+	const formTitle = (options.responseFormTitle as string) || '';
+	const formDescription = (options.responseFormDescription as string) || message;
+	const formButtonLabel = (options.responseFormButtonLabel as string) || 'Submit';
+
 	let elements: FormElement[] = [];
 
 	try {
-		formTitle = (this.getNodeParameter('responseFormTitle', 0) as string) || formTitle;
-		formDescription = (this.getNodeParameter('responseFormDescription', 0) as string) || '';
-		formButtonLabel = (this.getNodeParameter('responseFormButtonLabel', 0) as string) || formButtonLabel;
 		const formElementsData = this.getNodeParameter('formElements', 0) as IDataObject;
 		const elementValues = (formElementsData?.elementValues as IDataObject[]) || [];
 
@@ -116,8 +129,24 @@ function buildCustomFormPage(this: IWebhookFunctions, webhookUrl: string): strin
 			selectOptions: el.selectOptions as string,
 		}));
 	} catch {
-		// Use defaults if parameters not available
+		// Use empty elements if not available
 	}
 
 	return createFormPage(formTitle, formDescription, formButtonLabel, elements, webhookUrl);
+}
+
+function getMessageParam(this: IWebhookFunctions): string {
+	try {
+		return (this.getNodeParameter('message', 0) as string) || '';
+	} catch {
+		return '';
+	}
+}
+
+function getOptionsParam(this: IWebhookFunctions): IDataObject {
+	try {
+		return (this.getNodeParameter('options', 0) as IDataObject) || {};
+	} catch {
+		return {};
+	}
 }

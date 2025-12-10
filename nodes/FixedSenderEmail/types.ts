@@ -3,11 +3,11 @@ import type { IDataObject } from 'n8n-workflow';
 // Operation constants
 export const SEND_AND_WAIT_OPERATION = 'sendAndWait';
 
-// Button styles for email
+// Button styles for email (matching n8n official style)
 export const BUTTON_STYLE_PRIMARY =
-	'background-color: #ff6d5a; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; text-decoration: none; display: inline-block; margin: 4px;';
+	'display:inline-block; text-decoration:none; background-color:#ff6d5a; color:#fff; padding:12px 24px; font-family:Arial,sans-serif; font-size:14px; font-weight:600; border-radius:6px; min-width:120px; margin:12px 2px 0 2px;';
 export const BUTTON_STYLE_SECONDARY =
-	'background-color: white; color: #909399; border: 1px solid #909399; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; text-decoration: none; display: inline-block; margin: 4px;';
+	'display:inline-block; text-decoration:none; background-color:#fff; color:#4a4a4a; padding:12px 24px; font-family:Arial,sans-serif; font-size:14px; font-weight:600; border:1px solid #d1d1d1; border-radius:6px; min-width:120px; margin:12px 6px 0 6px;';
 
 // Interfaces
 export interface FormElement {
